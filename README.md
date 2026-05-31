@@ -5,7 +5,7 @@ A simple Python analog clock UI built with Tkinter.
 ## Run
 
 ```bash
-python analog_clock.py
+python3 analog_clock.py
 ```
 
 Tkinter ships with most Python installations. If your system Python does not include it,

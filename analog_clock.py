@@ -2,7 +2,7 @@
 
 Run this module directly to display a resizable analog clock:
 
-    python analog_clock.py
+    python3 analog_clock.py
 """
 
 from __future__ import annotations
