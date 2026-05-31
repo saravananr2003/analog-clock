@@ -29,9 +29,12 @@ BEZEL_HIGHLIGHT = "#4a5248"
 
 GRID_COLS = 12
 GRID_ROWS = 16
-CELL = 14
-HUD_HEIGHT = 28
-BEZEL_PAD = 10
+DISPLAY_SCALE = 1.3
+CELL = round(14 * DISPLAY_SCALE)
+HUD_HEIGHT = round(28 * DISPLAY_SCALE)
+BEZEL_PAD = round(10 * DISPLAY_SCALE)
+FRAME_PAD = round(14 * DISPLAY_SCALE)
+WINDOW_MARGIN = round(28 * DISPLAY_SCALE)
 TICK_MS = 180
 MIN_TICK_MS = 70
 SPEEDUP_EVERY = 5
@@ -73,10 +76,14 @@ class SnakeGame:
         screen_w = BEZEL_PAD * 2 + GRID_COLS * CELL
         screen_h = BEZEL_PAD * 2 + HUD_HEIGHT + GRID_ROWS * CELL
 
-        self.nokia_font = tkfont.Font(family="Helvetica", size=9, weight="bold")
-        self.title_font = tkfont.Font(family="Helvetica", size=14, weight="bold")
+        self.nokia_font = tkfont.Font(
+            family="Helvetica", size=round(9 * DISPLAY_SCALE), weight="bold"
+        )
+        self.title_font = tkfont.Font(
+            family="Helvetica", size=round(14 * DISPLAY_SCALE), weight="bold"
+        )
 
-        outer = Frame(root, bg=BEZEL, padx=14, pady=14)
+        outer = Frame(root, bg=BEZEL, padx=FRAME_PAD, pady=FRAME_PAD)
         outer.pack()
 
         self.phone = Frame(outer, bg=BEZEL_HIGHLIGHT, padx=BEZEL_PAD, pady=BEZEL_PAD)
@@ -89,8 +96,8 @@ class SnakeGame:
             fg=LCD_DARK,
             bg=LCD_LIGHT,
             anchor="w",
-            padx=6,
-            pady=4,
+            padx=round(6 * DISPLAY_SCALE),
+            pady=round(4 * DISPLAY_SCALE),
         )
         self.hud.pack(fill="x")
 
@@ -104,7 +111,7 @@ class SnakeGame:
         )
         self.canvas.pack()
 
-        self.root.geometry(f"{screen_w + 28}x{screen_h + 28}")
+        self.root.geometry(f"{screen_w + WINDOW_MARGIN}x{screen_h + WINDOW_MARGIN}")
         self._bind_keys()
 
         self.phase = GamePhase.TITLE
@@ -257,8 +264,8 @@ class SnakeGame:
         if self.phase == GamePhase.TITLE:
             self.hud.configure(text="  Snake II")
             self._draw_center_text("SNAKE II", self.title_font)
-            self._draw_center_text("Press 5", self.nokia_font, y_offset=22)
-            self._draw_center_text("2 4 6 8", self.nokia_font, y_offset=40)
+            self._draw_center_text("Press 5", self.nokia_font, y_offset=round(22 * DISPLAY_SCALE))
+            self._draw_center_text("2 4 6 8", self.nokia_font, y_offset=round(40 * DISPLAY_SCALE))
             return
 
         self._update_hud()
@@ -297,7 +304,10 @@ class SnakeGame:
     def _draw_overlay(self, text: str) -> None:
         w = GRID_COLS * CELL
         h = GRID_ROWS * CELL
-        self.canvas.create_rectangle(2, h // 2 - 18, w - 2, h // 2 + 18, fill=LCD_LIGHT, outline=LCD_DARK)
+        overlay_half = round(18 * DISPLAY_SCALE)
+        self.canvas.create_rectangle(
+            2, h // 2 - overlay_half, w - 2, h // 2 + overlay_half, fill=LCD_LIGHT, outline=LCD_DARK
+        )
         self.canvas.create_text(w / 2, h / 2, text=text, fill=LCD_DARK, font=self.nokia_font)
 
 
