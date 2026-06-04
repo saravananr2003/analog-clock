@@ -27,8 +27,9 @@ LCD_MID = "#6b8f71"
 BEZEL = "#2a2f28"
 BEZEL_HIGHLIGHT = "#4a5248"
 
-GRID_COLS = 12
-GRID_ROWS = 16
+# Original Nokia-ish grid was 12×16; doubled for 100%+ larger play area
+GRID_COLS = 24
+GRID_ROWS = 32
 DISPLAY_SCALE = 1.3
 CELL = round(14 * DISPLAY_SCALE)
 HUD_HEIGHT = round(28 * DISPLAY_SCALE)
@@ -178,7 +179,7 @@ class SnakeGame:
 
     def _start_game(self) -> None:
         mid_y = GRID_ROWS // 2
-        self.snake = [Point(4, mid_y), Point(3, mid_y), Point(2, mid_y)]
+        self.snake = [Point(8, mid_y), Point(7, mid_y), Point(6, mid_y)]
         self.direction = Direction.RIGHT
         self.next_direction = Direction.RIGHT
         self.score = 0
