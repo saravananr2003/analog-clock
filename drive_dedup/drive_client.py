@@ -16,7 +16,7 @@ from drive_dedup.models import DriveImage, IMAGE_MIME_PREFIXES
 
 FIELDS = (
     "nextPageToken, files(id, name, mimeType, size, md5Checksum, "
-    "createdTime, modifiedTime, parents, webViewLink, "
+    "createdTime, modifiedTime, parents, webViewLink, thumbnailLink, "
     "imageMediaMetadata(width, height))"
 )
 
@@ -165,3 +165,17 @@ class DriveClient:
             if progress:
                 progress(index, total)
         return success, failures
+
+    def get_thumbnail_jpeg(
+        self,
+        file_id: str,
+        max_edge: int = 480,
+    ) -> bytes:
+        """Download an image and return a JPEG thumbnail."""
+        raw = self.download_bytes(file_id)
+        with Image.open(io.BytesIO(raw)) as pil_image:
+            image = pil_image.convert("RGB")
+            image.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+            out = io.BytesIO()
+            image.save(out, format="JPEG", quality=85, optimize=True)
+            return out.getvalue()
