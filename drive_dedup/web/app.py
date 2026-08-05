@@ -6,6 +6,7 @@ import os
 import secrets
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -23,6 +24,7 @@ from drive_dedup.auth import (
     load_credentials,
 )
 from drive_dedup.drive_client import DriveClient
+from drive_dedup.oauth_state import pop_oauth_state, save_oauth_state
 from drive_dedup.scan_service import scan_manager
 
 WEB_DIR = Path(__file__).resolve().parent
@@ -31,14 +33,12 @@ TEMPLATES = Jinja2Templates(directory=str(WEB_DIR / "templates"))
 app = FastAPI(title="Drive Dedup", version=__version__)
 app.mount("/static", StaticFiles(directory=str(WEB_DIR / "static")), name="static")
 
-# Ephemeral OAuth state store for CSRF protection (local single-user app).
-_oauth_states: set[str] = set()
-
 
 def _public_base_url(request: Request) -> str:
     configured = os.environ.get("DRIVE_DEDUP_BASE_URL")
     if configured:
         return configured.rstrip("/")
+    # Prefer the Host the browser used so redirect_uri matches Google Console.
     return str(request.base_url).rstrip("/")
 
 
@@ -94,13 +94,23 @@ async def auth_login(request: Request) -> RedirectResponse:
             ),
         )
     state = secrets.token_urlsafe(24)
-    _oauth_states.add(state)
-    flow = create_web_flow(_redirect_uri(request))
+    redirect_uri = _redirect_uri(request)
+    flow = create_web_flow(redirect_uri)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
         state=state,
+    )
+    if not flow.code_verifier:
+        raise HTTPException(
+            status_code=500,
+            detail="OAuth PKCE code_verifier was not generated; cannot continue login.",
+        )
+    save_oauth_state(
+        state,
+        code_verifier=flow.code_verifier,
+        redirect_uri=redirect_uri,
     )
     return RedirectResponse(auth_url)
 
@@ -114,10 +124,23 @@ async def auth_callback(
 ) -> RedirectResponse:
     if error:
         return RedirectResponse(f"/?auth=error&message={error}")
-    if not code or not state or state not in _oauth_states:
+    if not code or not state:
         raise HTTPException(status_code=400, detail="Invalid OAuth callback")
-    _oauth_states.discard(state)
-    exchange_web_code(code=code, redirect_uri=_redirect_uri(request))
+
+    pending = pop_oauth_state(state)
+    if pending is None:
+        return RedirectResponse(
+            "/?auth=error&message=Login+session+expired.+Please+connect+again."
+        )
+
+    try:
+        exchange_web_code(
+            code=code,
+            redirect_uri=pending["redirect_uri"],
+            code_verifier=pending["code_verifier"],
+        )
+    except Exception as exc:  # noqa: BLE001 — show friendly auth errors in UI
+        return RedirectResponse(f"/?auth=error&message={quote(str(exc))}")
     return RedirectResponse("/?auth=success")
 
 
