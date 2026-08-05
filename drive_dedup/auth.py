@@ -132,11 +132,18 @@ def exchange_web_code(
     redirect_uri: str,
     credentials_path: Optional[Path] = None,
     token_path: Optional[Path] = None,
-    state: Optional[str] = None,
+    code_verifier: Optional[str] = None,
 ) -> Credentials:
-    """Exchange an OAuth authorization code and persist the token."""
+    """Exchange an OAuth authorization code and persist the token.
+
+    ``code_verifier`` is required when the authorization URL was created with
+    PKCE (the default for google-auth-oauthlib). Pass the same verifier that
+    was generated during ``authorization_url()``.
+    """
     flow = create_web_flow(redirect_uri, credentials_path=credentials_path)
-    flow.fetch_token(code=code)
+    if code_verifier:
+        flow.code_verifier = code_verifier
+    flow.fetch_token(code=code, code_verifier=code_verifier)
     creds = flow.credentials
     save_credentials(creds, token_path=token_path)
     return creds

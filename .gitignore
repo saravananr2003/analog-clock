@@ -21,3 +21,4 @@ credentials/*.json
 .cache/
 reports/
 *.log
+.cache/oauth_states.json

@@ -29,6 +29,8 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 Then click **Connect Google Drive** in the web app.
 
+If Google returns `invalid_grant / Invalid code verifier`, restart the web app after pulling the latest code — login now persists the PKCE verifier across the OAuth redirect. Also make sure the redirect URI in Google Cloud exactly matches the URL you open (for example `http://127.0.0.1:8000/auth/callback`, not `http://localhost:8000/...`).
+
 ## Features
 
 - Visual side-by-side review of duplicate groups with thumbnails
