@@ -259,21 +259,74 @@ def _make_demo_jpeg(
     width, height = size
     image = Image.new("RGB", (width, height), color)
     draw = ImageDraw.Draw(image)
-    # Soft diagonal wash for atmosphere.
-    overlay = Image.new("RGB", (width, height), (255, 255, 255))
-    overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.polygon(
-        [(0, 0), (width, 0), (width, height // 2), (0, height)],
-        fill=(245, 240, 230),
-    )
-    image = Image.blend(image, overlay, 0.18)
+
+    # Sky / ground split with soft bands so demos read as photos, not flat tiles.
+    sky_top = tuple(min(255, c + 40) for c in color)
+    ground = tuple(max(0, c - 35) for c in color)
+    for y in range(height):
+        t = y / max(height - 1, 1)
+        if t < 0.55:
+            blend = t / 0.55
+            band = tuple(
+                int(sky_top[i] * (1 - blend) + color[i] * blend) for i in range(3)
+            )
+        else:
+            blend = (t - 0.55) / 0.45
+            band = tuple(
+                int(color[i] * (1 - blend) + ground[i] * blend) for i in range(3)
+            )
+        draw.line([(0, y), (width, y)], fill=band)
+
+    if label.lower() == "beach":
+        # Sun + water horizon.
+        sun_r = max(40, width // 12)
+        draw.ellipse(
+            (width - sun_r * 3, height // 8, width - sun_r, height // 8 + sun_r * 2),
+            fill=(250, 220, 120),
+        )
+        horizon = int(height * 0.58)
+        draw.rectangle((0, horizon, width, height), fill=(40, 120, 140))
+        for wave_y in range(horizon + 20, height, 28):
+            draw.arc(
+                (40, wave_y, width - 40, wave_y + 36),
+                start=0,
+                end=180,
+                fill=(180, 220, 230),
+                width=3,
+            )
+    else:
+        # Trail / hills silhouette.
+        draw.polygon(
+            [
+                (0, int(height * 0.72)),
+                (int(width * 0.28), int(height * 0.42)),
+                (int(width * 0.52), int(height * 0.62)),
+                (int(width * 0.78), int(height * 0.36)),
+                (width, int(height * 0.58)),
+                (width, height),
+                (0, height),
+            ],
+            fill=tuple(max(0, c - 55) for c in color),
+        )
+        path = [
+            (int(width * 0.45), height),
+            (int(width * 0.48), int(height * 0.78)),
+            (int(width * 0.52), int(height * 0.62)),
+            (int(width * 0.55), int(height * 0.5)),
+        ]
+        draw.line(path, fill=(230, 210, 170), width=max(8, width // 80))
+
+    # Subtle vignette corners.
+    vignette = Image.new("RGB", (width, height), (20, 20, 20))
+    image = Image.blend(image, vignette, 0.08)
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default()
-    draw.text((48, height // 2 - 24), label, fill=(250, 250, 248), font=font)
-    draw.text((48, height // 2 + 8), subtitle[:40], fill=(245, 245, 240), font=font)
-    out = io.BytesIO()
+    draw.text((36, height - 64), label, fill=(250, 250, 248), font=font)
+    draw.text((36, height - 42), subtitle[:42], fill=(235, 235, 230), font=font)
+
     image.thumbnail((480, 480), Image.Resampling.LANCZOS)
-    image.save(out, format="JPEG", quality=85)
+    out = io.BytesIO()
+    image.save(out, format="JPEG", quality=88)
     return out.getvalue()
 
 
