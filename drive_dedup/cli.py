@@ -347,5 +347,30 @@ def remove_from_report(
             console.print(f"  - {file_id}: {err}")
 
 
+@main.command("web")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Bind host.")
+@click.option("--port", default=8000, show_default=True, help="Bind port.")
+@click.option("--reload", is_flag=True, help="Auto-reload on code changes.")
+def web(host: str, port: int, reload: bool) -> None:
+    """Launch the visual web app for reviewing duplicate images."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise SystemExit(
+            "Web dependencies missing. Install with: pip install -e '.[web]'"
+        ) from exc
+
+    console.print(
+        f"Starting Drive Dedup web UI at [cyan]http://{host}:{port}[/cyan]\n"
+        "Use [bold]Try a visual demo[/bold] without Google credentials, or connect Drive to scan for real."
+    )
+    uvicorn.run(
+        "drive_dedup.web.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
 if __name__ == "__main__":
     main()

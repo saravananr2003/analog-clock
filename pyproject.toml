@@ -19,13 +19,29 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0"]
+web = [
+  "fastapi>=0.110.0",
+  "uvicorn[standard]>=0.27.0",
+  "python-multipart>=0.0.9",
+  "jinja2>=3.1.0",
+]
+dev = [
+  "pytest>=8.0.0",
+  "httpx>=0.27.0",
+  "fastapi>=0.110.0",
+  "uvicorn[standard]>=0.27.0",
+  "python-multipart>=0.0.9",
+  "jinja2>=3.1.0",
+]
 
 [project.scripts]
 drive-dedup = "drive_dedup.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["drive_dedup*"]
+
+[tool.setuptools.package-data]
+"drive_dedup.web" = ["templates/*", "static/*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

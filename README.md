@@ -1,116 +1,80 @@
-# Google Drive Image Deduplicator
+# Drive Dedup
 
-Python CLI that scans images on Google Drive, finds exact and visually similar duplicates, recommends which copies to remove, and trashes them only after you confirm.
+Find duplicate images on Google Drive, **visually compare them in a web app**, recommend what to remove, and trash only after you confirm.
 
-## Features
-
-- Lists images from your Google Drive (optionally limited to a folder)
-- Detects **exact** duplicates via Drive `md5Checksum` / content hash
-- Detects **visually similar** duplicates via perceptual hashing (`pHash`)
-- Recommends a keeper per group (higher resolution → larger size → cleaner name → older file)
-- Writes a JSON report you can review
-- Moves recommended files to **Drive Trash** only after explicit confirmation
-
-## Setup
-
-### 1. Install dependencies
+## Web app (recommended)
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
+python -m drive_dedup web
 ```
 
-### 2. Create Google Cloud OAuth credentials
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+- **Try a visual demo** — review sample duplicate groups with thumbnails (no Google account needed)
+- **Connect Google Drive** — scan your real images, toggle Keep/Remove on each photo, then confirm trash
+
+### Google OAuth setup (for real Drive scans)
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/)
-2. Create or select a project
-3. Enable the **Google Drive API**
-4. Configure the **OAuth consent screen** (External is fine for personal use; add your Google account as a test user while in Testing)
-5. Create credentials → **OAuth client ID** → Application type **Desktop app**
-6. Download the JSON file and save it as:
+2. Create or select a project and enable the **Google Drive API**
+3. Configure the **OAuth consent screen** (add yourself as a test user while in Testing)
+4. Create an OAuth client:
+   - **Web application** is best for the web UI
+   - Authorized redirect URI: `http://127.0.0.1:8000/auth/callback`
+   - (Desktop clients can also work for the CLI)
+5. Download the JSON and save it as `credentials/credentials.json`
 
-```text
-credentials/credentials.json
-```
+Then click **Connect Google Drive** in the web app.
 
-### 3. Authenticate (first run)
+## Features
+
+- Visual side-by-side review of duplicate groups with thumbnails
+- Exact duplicates (content hash / Drive `md5Checksum`)
+- Visually similar images (perceptual `pHash`)
+- Keeper recommendations you can override with a click
+- Confirmed removal → Google Drive Trash (restorable)
+- CLI available for scripting / headless scans
+
+## CLI
 
 ```bash
 python -m drive_dedup scan
+python -m drive_dedup scan --remove
+python -m drive_dedup remove-from-report
+python -m drive_dedup web --port 8000
 ```
-
-A browser window opens for Google sign-in. After consent, a token is cached at `credentials/token.json`.
-
-## Usage
-
-### Scan and review recommendations
-
-```bash
-python -m drive_dedup scan
-```
-
-Optional flags:
 
 | Flag | Description |
 |------|-------------|
 | `--folder-id ID` | Limit scan to one Drive folder |
-| `--exact-only` | Skip perceptual (visual) matching |
-| `--threshold 5` | Max pHash distance for similar images (default 5) |
-| `--skip-download` | Use Drive md5 only; no downloads |
-| `--report PATH` | JSON report path (default `reports/duplicates.json`) |
-
-### Scan and remove after confirmation
-
-```bash
-python -m drive_dedup scan --remove
-```
-
-You will be prompted before anything is trashed. To skip the prompt (automation):
-
-```bash
-python -m drive_dedup scan --remove --yes
-```
-
-### Remove from a previous report
-
-Edit `reports/duplicates.json` if you want to drop some recommendations, then:
-
-```bash
-python -m drive_dedup remove-from-report
-```
-
-Or only specific groups:
-
-```bash
-python -m drive_dedup remove-from-report --group 1 --group 3
-```
+| `--exact-only` | Skip perceptual matching |
+| `--threshold 5` | Max pHash distance for similar images |
+| `--skip-download` | Use Drive md5 only (CLI) |
+| `--report PATH` | JSON report path |
 
 ## How keeper selection works
 
-For each duplicate group the app keeps one file and recommends the rest for removal:
-
-1. Highest resolution (width × height)
-2. Largest file size
-3. Cleaner filename (avoids names like `Copy of …` or `photo (1).jpg`)
-4. Older `createdTime` (likely the original)
-5. Stable file id as a final tie-breaker
-
-Deleted items go to Google Drive Trash so they can be restored if needed.
+1. Highest resolution  
+2. Largest file size  
+3. Cleaner filename (avoids `Copy of …`)  
+4. Older `createdTime`  
+5. Stable file id tie-breaker  
 
 ## Project layout
 
 ```text
 drive_dedup/
-  auth.py           # OAuth2 + Drive service
-  drive_client.py   # List / download / trash
+  web/              # FastAPI UI + static assets
+  auth.py           # OAuth (CLI + browser)
+  drive_client.py   # List / download / trash / thumbnails
   duplicates.py     # Matching + recommendations
-  cli.py            # Click + Rich CLI
-  models.py         # Data models
+  scan_service.py   # Background scan jobs
+  cli.py            # Click CLI
 tests/
-  test_duplicates.py
-credentials/        # Your OAuth secrets (gitignored)
-reports/            # Scan reports (gitignored)
+credentials/        # OAuth secrets (gitignored)
 ```
 
 ## Tests
@@ -122,5 +86,5 @@ pytest -q
 ## Security notes
 
 - Never commit `credentials/credentials.json` or `credentials/token.json`
-- The app requests the Drive scope so it can trash files you confirm
-- Prefer reviewing the report before using `--remove --yes`
+- Removals require an explicit confirmation step
+- Prefer the web review UI before bulk deletion

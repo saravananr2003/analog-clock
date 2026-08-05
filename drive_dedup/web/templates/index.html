@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drive Dedup — See & clear duplicate photos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand-mark" href="/">Drive Dedup</a>
+      <div class="topbar-actions">
+        <span id="auth-pill" class="status-pill" data-state="{{ 'in' if authenticated else 'out' }}">
+          {{ "Drive connected" if authenticated else "Not connected" }}
+        </span>
+        {% if authenticated %}
+        <button type="button" class="btn btn-ghost" id="btn-rescan-top">New scan</button>
+        {% else %}
+        <a class="btn btn-ghost" href="/auth/login" id="btn-connect-top">Connect Drive</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="hero">
+        <div class="hero-copy">
+          <p class="brand-hero">Drive Dedup</p>
+          <h1>See every duplicate before you clear it.</h1>
+          <p class="lede">
+            Scan Google Drive, compare lookalikes side by side, and trash only what you confirm.
+          </p>
+          <div class="cta-row">
+            {% if authenticated %}
+            <button type="button" class="btn btn-primary" id="btn-start-scan">Scan my Drive</button>
+            {% else %}
+            <a class="btn btn-primary" href="/auth/login">Connect Google Drive</a>
+            {% endif %}
+            <button type="button" class="btn btn-secondary" id="btn-demo">Try a visual demo</button>
+          </div>
+          {% if not credentials_ready %}
+          <p class="setup-hint">
+            Add your OAuth client JSON at <code>credentials/credentials.json</code> to connect a real Drive.
+          </p>
+          {% endif %}
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="photo-plane">
+            <figure class="stack-shot shot-a"></figure>
+            <figure class="stack-shot shot-b"></figure>
+            <figure class="stack-shot shot-c"></figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace hidden" id="workspace">
+        <div class="workspace-head">
+          <div>
+            <h2 id="workspace-title">Scan</h2>
+            <p class="workspace-sub" id="workspace-sub">Configure and run a duplicate scan.</p>
+          </div>
+        </div>
+
+        <form class="scan-form" id="scan-form">
+          <label>
+            <span>Folder ID <em>(optional)</em></span>
+            <input type="text" name="folder_id" placeholder="Leave empty to scan all images" />
+          </label>
+          <label class="check">
+            <input type="checkbox" name="exact_only" />
+            <span>Exact matches only</span>
+          </label>
+          <label>
+            <span>Similarity threshold</span>
+            <input type="number" name="threshold" min="0" max="64" value="5" />
+          </label>
+          <button type="submit" class="btn btn-primary" id="btn-run-scan">Run scan</button>
+        </form>
+
+        <div class="progress-panel hidden" id="progress-panel" aria-live="polite">
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <p id="progress-message">Starting…</p>
+        </div>
+
+        <div class="results hidden" id="results">
+          <div class="results-summary">
+            <h2>Duplicate groups</h2>
+            <p id="results-summary-text"></p>
+            <div class="results-actions">
+              <button type="button" class="btn btn-secondary" id="btn-select-recommended">
+                Use recommendations
+              </button>
+              <button type="button" class="btn btn-danger" id="btn-remove" disabled>
+                Remove selected
+              </button>
+            </div>
+          </div>
+          <div id="groups" class="groups"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal hidden" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-panel">
+        <h3 id="confirm-title">Confirm removal</h3>
+        <p id="confirm-body">Move selected duplicates to Google Drive Trash?</p>
+        <div class="confirm-thumbs" id="confirm-thumbs"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-remove">Cancel</button>
+          <button type="button" class="btn btn-danger" id="btn-confirm-remove">Yes, move to Trash</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__DRIVE_DEDUP__ = {
+        authenticated: {{ "true" if authenticated else "false" }},
+        credentialsReady: {{ "true" if credentials_ready else "false" }},
+      };
+    </script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
